@@ -1,5 +1,7 @@
 const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
 exports.createUser = async (req, res) => {
     try {
         const { userName, password } = req.body;
@@ -11,6 +13,7 @@ exports.createUser = async (req, res) => {
         res.status(400).json({ message: 'Error creating user', error: error.message });
     }
 };
+
 exports.authenticateUser = async (req, res) => {
     try {
         const { userName, password } = req.body;
@@ -18,7 +21,13 @@ exports.authenticateUser = async (req, res) => {
         if (user && !user.deletedOn) {
             const isMatch = await bcrypt.compare(password, user.password);
             if (isMatch) {
-                res.status(200).json({ message: 'User authenticated successfully', user: { id: user._id, userName: user.userName } });
+                // Generar el token JWT
+                const token = jwt.sign(
+                    { id: user._id, userName: user.userName },
+                    process.env.JWT_SECRET,
+                    { expiresIn: '1h' }
+                );
+                res.status(200).json({ message: 'User authenticated successfully', token });
             } else {
                 res.status(401).json({ message: 'Invalid credentials' });
             }
@@ -53,6 +62,7 @@ exports.updateUser = async (req, res) => {
         res.status(400).json({ message: 'Error updating user', error: error.message });
     }
 };
+
 exports.deleteUser = async (req, res) => {
     try {
         await User.findByIdAndUpdate(req.params.id, { deletedOn: Date.now() });
